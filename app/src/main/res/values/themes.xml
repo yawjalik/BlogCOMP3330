@@ -11,11 +11,23 @@
         <item name="shapeAppearanceOverlay">@style/card_view</item>
     </style>
 
+    <style name="card_view_style_rounded_bottom" parent="Widget.MaterialComponents.CardView">
+        <item name="shapeAppearanceOverlay">@style/card_view_rounded_bottom</item>
+    </style>
+
     <style name="card_view" parent="">
         <item name="cornerFamily">rounded</item>
         <item name="cornerSizeTopRight">24dp</item>
         <item name="cornerSizeTopLeft">24dp</item>
         <item name="cornerSizeBottomLeft">0dp</item>
         <item name="cornerSizeBottomRight">0dp</item>
+    </style>
+
+    <style name="card_view_rounded_bottom" parent="">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSizeTopRight">0dp</item>
+        <item name="cornerSizeTopLeft">0dp</item>
+        <item name="cornerSizeBottomLeft">12dp</item>
+        <item name="cornerSizeBottomRight">12dp</item>
     </style>
 </resources>
