@@ -10,14 +10,12 @@ import android.widget.Toast
 import com.google.firebase.auth.FirebaseAuth
 
 class LoginActivity : AppCompatActivity() {
-    private lateinit var auth: FirebaseAuth
+
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
-
-        // Instantiate Firebase Auth
-        auth = FirebaseAuth.getInstance()
 
         // Get current user
         val currentUser = auth.currentUser
@@ -30,12 +28,10 @@ class LoginActivity : AppCompatActivity() {
         }
 
         // Set login behavior
-        val email: EditText = findViewById(R.id.loginEmail)
-        val password: EditText = findViewById(R.id.loginPassword)
         val loginButton: Button = findViewById(R.id.loginButton)
         loginButton.setOnClickListener {
-            val emailText = email.text.toString()
-            val passwordText = password.text.toString()
+            val emailText: String = findViewById<EditText>(R.id.loginEmail).text.toString()
+            val passwordText = findViewById<EditText>(R.id.loginPassword).text.toString()
 
             // Perform basic validation
             if (emailText.isEmpty() || passwordText.isEmpty()) {

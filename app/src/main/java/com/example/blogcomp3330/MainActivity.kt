@@ -24,7 +24,6 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.firestore
 import com.google.firebase.storage.storage
-import com.google.firebase.firestore.DocumentId
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.toObject
 import java.time.LocalDateTime
@@ -64,6 +63,18 @@ class MainActivity : AppCompatActivity() {
             startActivity(intent)
             finish()
         }
+
+        // Get current user's name
+        var name = ""
+        db.collection("User").document(currentUser?.uid ?: "").get()
+            .addOnSuccessListener { document ->
+                val user = document.toObject<User>()
+                if (user != null) {
+                    name = "${user.firstName} ${user.lastName}"
+                }
+            }.addOnFailureListener {
+                Log.e("MainActivity", "Failed to get user")
+            }
 
         // Setup recycler view
         recyclerView = findViewById(R.id.postsRecyclerView)
@@ -115,6 +126,7 @@ class MainActivity : AppCompatActivity() {
             // Create post
             val post = hashMapOf(
                 "userId" to currentUser?.uid,
+                "author" to name,
                 "title" to title,
                 "content" to content,
                 "date" to LocalDateTime.now()
@@ -170,22 +182,13 @@ class MainActivity : AppCompatActivity() {
     }
 }
 
-data class Post(
-    @DocumentId
-    val id: String = "",
-    val userId: String = "",
-    val title: String = "",
-    val content: String = "",
-    val date: String = "",
-    val image: String = ""
-)
-
 class PostsAdapter(private val posts: List<Post>) :
     RecyclerView.Adapter<PostsAdapter.ViewHolder>() {
 
     private val storage = Firebase.storage
 
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        val author: TextView = itemView.findViewById(R.id.postAuthor)
         val title: TextView = itemView.findViewById(R.id.postTitle)
         val content: TextView = itemView.findViewById(R.id.postContent)
         val date: TextView = itemView.findViewById(R.id.postDate)
@@ -199,6 +202,7 @@ class PostsAdapter(private val posts: List<Post>) :
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val post = posts[position]
+        holder.author.text = post.author
         holder.title.text = post.title
         holder.date.text = post.date
         holder.content.text = post.content
