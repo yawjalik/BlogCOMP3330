@@ -2,6 +2,7 @@ package com.example.blogcomp3330
 
 import android.content.Intent
 import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
@@ -13,6 +14,8 @@ import android.widget.EditText
 import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.RequiresApi
 import androidx.appcompat.widget.AppCompatButton
 import androidx.appcompat.widget.AppCompatImageButton
@@ -30,8 +33,18 @@ import java.time.format.DateTimeFormatter
 class MainActivity : AppCompatActivity() {
     private lateinit var auth: FirebaseAuth
     private val db = Firebase.firestore
+    private val storage = Firebase.storage
     private var posts = ArrayList<Post>()
+    private var imageUri: Uri? = null
     private lateinit var recyclerView: RecyclerView
+
+
+    private val imageSelector =
+        registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+            val createPostImagePreview: ImageView = findViewById(R.id.createPostImagePreview)
+            imageUri = uri
+            createPostImagePreview.setImageURI(uri)
+        }
 
 
     @RequiresApi(Build.VERSION_CODES.O)
@@ -60,11 +73,18 @@ class MainActivity : AppCompatActivity() {
         // Get posts from Firestore, order by date
         getPosts()
 
+        // Image selector
+        val uploadImageButton: AppCompatButton = findViewById(R.id.uploadImageButton)
+        uploadImageButton.setOnClickListener {
+            imageSelector.launch(PickVisualMediaRequest())
+        }
+
         // Set up create post
         val createPostButton: AppCompatImageButton = findViewById(R.id.createPostButton)
         createPostButton.setOnClickListener {
             val createPostTitle: EditText = findViewById(R.id.createPostTitle)
             val createPostContent: EditText = findViewById(R.id.createPostContent)
+            val createPostImagePreview: ImageView = findViewById(R.id.createPostImagePreview)
 
             // Basic validation
             val title = createPostTitle.text.toString().trim()
@@ -78,12 +98,28 @@ class MainActivity : AppCompatActivity() {
                 return@setOnClickListener
             }
 
+            // Upload image
+            val currentUser = auth.currentUser
+            val imagePath =
+                if (imageUri != null) "images/${currentUser?.uid}/${System.currentTimeMillis()}.jpg" else ""
+            if (imageUri != null && currentUser != null) {
+                val imageRef =
+                    storage.reference.child(imagePath)
+                imageRef.putFile(imageUri!!).addOnSuccessListener {
+                    Log.d("MainActivity", "Image uploaded")
+                }.addOnFailureListener {
+                    Log.e("MainActivity", "Failed to upload image")
+                }
+            }
+
             // Create post
             val post = hashMapOf(
                 "userId" to currentUser?.uid,
                 "title" to title,
                 "content" to content,
-                "date" to LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                "date" to LocalDateTime.now()
+                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
+                "image" to imagePath
             )
             db.collection("Post").add(post).addOnSuccessListener {
                 Toast.makeText(this, "Post created", Toast.LENGTH_SHORT).show()
@@ -91,9 +127,11 @@ class MainActivity : AppCompatActivity() {
                 // Refetch data and update recycler view
                 getPosts()
 
-                // Clear input fields
+                // Clear input fields and image preview
                 createPostTitle.text.clear()
                 createPostContent.text.clear()
+                imageUri = null
+                createPostImagePreview.setImageResource(R.drawable.ic_launcher_foreground)
             }.addOnFailureListener {
                 Toast.makeText(this, "Failed to create post", Toast.LENGTH_SHORT).show()
             }
@@ -115,19 +153,20 @@ class MainActivity : AppCompatActivity() {
     private fun getPosts() {
         posts.clear()
         val postsRef = db.collection("Post")
-        postsRef.orderBy("date", Query.Direction.DESCENDING).get().addOnSuccessListener { documents ->
-            val noPostsTextView: TextView = findViewById(R.id.noPostsTextView)
-            noPostsTextView.visibility = if (documents.isEmpty) View.VISIBLE else View.GONE
+        postsRef.orderBy("date", Query.Direction.DESCENDING).get()
+            .addOnSuccessListener { documents ->
+                val noPostsTextView: TextView = findViewById(R.id.noPostsTextView)
+                noPostsTextView.visibility = if (documents.isEmpty) View.VISIBLE else View.GONE
 
-            for (document in documents) {
-                Log.d("MainActivity", "${document.id} => ${document.data}")
-                val post = document.toObject<Post>()
-                posts.add(post)
+                for (document in documents) {
+                    Log.d("MainActivity", "${document.id} => ${document.data}")
+                    val post = document.toObject<Post>()
+                    posts.add(post)
+                }
+
+                // Update recycler view
+                recyclerView.adapter?.notifyDataSetChanged()
             }
-
-            // Update recycler view
-            recyclerView.adapter?.notifyDataSetChanged()
-        }
     }
 }
 
@@ -174,6 +213,8 @@ class PostsAdapter(private val posts: List<Post>) :
             }.addOnFailureListener {
                 Log.e("MainActivity", "Failed to get image")
             }
+        } else {
+            holder.image.setImageResource(R.drawable.ic_launcher_foreground)
         }
     }
 
