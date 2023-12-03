@@ -23,57 +23,30 @@ class SignUpActivity : AppCompatActivity() {
         // Set sign up behavior
         val signUpButton: Button = findViewById(R.id.signUpButton)
         signUpButton.setOnClickListener {
-            // Basic validation
             val firstNameText = findViewById<EditText>(R.id.signUpFirstName).text.toString()
-            if (firstNameText.isEmpty()) {
-                Toast.makeText(this, "Please enter your first name", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
             val lastNameText = findViewById<EditText>(R.id.signUpLastName).text.toString()
-            if (lastNameText.isEmpty()) {
-                Toast.makeText(this, "Please enter your last name", Toast.LENGTH_SHORT).show()
-                return@setOnClickListener
-            }
             val emailText = findViewById<EditText>(R.id.signUpEmail).text.toString()
-            if (!Regex("[^@]+@[^\\.]+\\..+").matches(emailText)) {
-                Toast.makeText(this, "Please enter a valid email address", Toast.LENGTH_SHORT)
-                    .show()
-                return@setOnClickListener
-            }
             val passwordText = findViewById<EditText>(R.id.signUpPassword).text.toString()
-            if (passwordText.length < 6) {
-                Toast.makeText(this, "Password must be at least 6 characters", Toast.LENGTH_SHORT)
-                    .show()
-                return@setOnClickListener
-            }
+            // You can add validation here
 
-            // Create user
+            // Create user in Firebase Auth
             auth.createUserWithEmailAndPassword(emailText, passwordText)
                 .addOnCompleteListener(this) { task ->
                     if (task.isSuccessful) {
-                        // Save user data
-                        val user = auth.currentUser
-                        user?.let { firebaseUser ->
-                            val currentUserUID = firebaseUser.uid
-                            val userDocumentRef = db.collection("User").document(currentUserUID)
-                            val userData = hashMapOf(
-                                "firstName" to firstNameText,
-                                "lastName" to lastNameText,
-                            )
-                            userDocumentRef.set(userData)
-                                .addOnSuccessListener {
-                                    Toast.makeText(this, "Sign up successful", Toast.LENGTH_SHORT)
-                                        .show()
-                                    // Redirect to MainActivity
-                                    val intent = Intent(this, MainActivity::class.java)
-                                    startActivity(intent)
-                                    finish()
-                                }
-                                .addOnFailureListener {
-                                    Toast.makeText(this, "Sign up failed", Toast.LENGTH_SHORT)
-                                        .show()
-                                }
-                        }
+                        // Save user data in Firestore
+                        val currentUserId = auth.currentUser?.uid
+                        val userDocumentRef = db.collection("User").document(currentUserId!!)
+                        userDocumentRef.set(User(firstNameText, lastNameText, emailText))
+                            .addOnSuccessListener {
+                                Toast.makeText(this, "Sign up successful", Toast.LENGTH_SHORT).show()
+                                // Redirect to MainActivity
+                                val intent = Intent(this, MainActivity::class.java)
+                                startActivity(intent)
+                                finish()
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(this, "Sign up failed", Toast.LENGTH_SHORT).show()
+                            }
                     } else {
                         // If sign up fails, display a message to the user.
                         Toast.makeText(this, "Sign up failed", Toast.LENGTH_SHORT).show()

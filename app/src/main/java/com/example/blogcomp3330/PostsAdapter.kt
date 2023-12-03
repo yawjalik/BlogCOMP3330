@@ -16,6 +16,9 @@ class PostsAdapter(private val posts: List<Post>) :
 
     private val storage = Firebase.storage
 
+    /**
+     * Provides a reference to the views for each data item
+     */
     class ViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
         val author: TextView = itemView.findViewById(R.id.postAuthor)
         val title: TextView = itemView.findViewById(R.id.postTitle)
@@ -24,11 +27,17 @@ class PostsAdapter(private val posts: List<Post>) :
         val image: ImageView = itemView.findViewById(R.id.postImage)
     }
 
+    /**
+     * Creates new views (invoked by the layout manager)
+     */
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val view = LayoutInflater.from(parent.context).inflate(R.layout.post, parent, false)
         return ViewHolder(view)
     }
 
+    /**
+     * Binds the data to the TextView in each row
+     */
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         val post = posts[position]
         holder.author.text = post.author
@@ -51,6 +60,9 @@ class PostsAdapter(private val posts: List<Post>) :
         }
     }
 
+    /**
+     * Returns the number of items in the list
+     */
     override fun getItemCount(): Int {
         return posts.size
     }

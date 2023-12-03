@@ -27,14 +27,13 @@ import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 
 class MainActivity : AppCompatActivity() {
-    private lateinit var auth: FirebaseAuth
+
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance()
     private val db = Firebase.firestore
     private val storage = Firebase.storage
     private var posts = ArrayList<Post>()
     private var imageUri: Uri? = null
     private lateinit var recyclerView: RecyclerView
-
-
     private val imageSelector =
         registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
             val createPostImagePreview: ImageView = findViewById(R.id.createPostImagePreview)
@@ -42,14 +41,9 @@ class MainActivity : AppCompatActivity() {
             createPostImagePreview.setImageURI(uri)
         }
 
-
-    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
-
-        // Instantiate Firebase Auth
-        auth = FirebaseAuth.getInstance()
 
         // Get current user
         val currentUser = auth.currentUser
@@ -59,11 +53,12 @@ class MainActivity : AppCompatActivity() {
             val intent = Intent(this, LoginActivity::class.java)
             startActivity(intent)
             finish()
+            return
         }
 
         // Get current user's name
         var name = ""
-        db.collection("User").document(currentUser?.uid ?: "").get()
+        db.collection("User").document(currentUser.uid).get()
             .addOnSuccessListener { document ->
                 val user = document.toObject<User>()
                 if (user != null) {
@@ -107,10 +102,8 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Upload image
-            val currentUser = auth.currentUser
-            val imagePath =
-                if (imageUri != null) "images/${currentUser?.uid}/${System.currentTimeMillis()}.jpg" else ""
-            if (imageUri != null && currentUser != null) {
+            val imagePath = if (imageUri != null) "images/${currentUser.uid}/${System.currentTimeMillis()}.jpg" else ""
+            if (imageUri != null) {
                 val imageRef =
                     storage.reference.child(imagePath)
                 imageRef.putFile(imageUri!!).addOnSuccessListener {
@@ -121,14 +114,13 @@ class MainActivity : AppCompatActivity() {
             }
 
             // Create post
-            val post = hashMapOf(
-                "userId" to currentUser?.uid,
-                "author" to name,
-                "title" to title,
-                "content" to content,
-                "date" to LocalDateTime.now()
-                    .format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")),
-                "image" to imagePath
+            val post = Post(
+                userId = currentUser.uid,
+                title = title,
+                content = content,
+                image = imagePath,
+                author = name,
+                date = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
             )
             db.collection("Post").add(post).addOnSuccessListener {
                 Toast.makeText(this, "Post created", Toast.LENGTH_SHORT).show()
@@ -157,7 +149,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * Fetch posts from Firestore and update recycler view
+     * Fetch posts from Firestore sorted by date and update recycler view
      */
     private fun getPosts() {
         posts.clear()
